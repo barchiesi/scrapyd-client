@@ -1,4 +1,5 @@
 import sys
+import functools
 
 from scrapyd_client import lib
 from scrapyd_client.utils import indent
@@ -25,7 +26,21 @@ def projects(args):
 
 def schedule(args):
     """Schedule the specified spider(s)."""
-    job_args = [(x[0], x[1]) for x in (y.split("=", 1) for y in args.arg)]
+    def reducer(args_map, arg):
+        key = arg[0]
+        value = arg[1]
+        if key in args_map:
+            prev = args_map[key]
+            if isinstance(prev, list):
+                args_map[key].append(value)
+            else:
+                args_map[key] = [prev, value]
+        else:
+            args_map[key] = value
+        return args_map
+
+    job_args = functools.reduce(reducer, [y.split("=", 1) for y in args.arg], {})
+
     _projects = lib.get_projects(
         args.target, args.project, username=args.username, password=args.password
     )
